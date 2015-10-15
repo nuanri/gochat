@@ -49,12 +49,15 @@ func handleConn(client net.Conn) {
 
 	for {
 		line, err := b.ReadBytes('\n')
-		fmt.Println("收到:", string(line[:len(line)-1]), err)
 		if err != nil { // EOF, or worse
+			fmt.Printf("client %s was disconnected!\n", client.RemoteAddr())
 			break
 		}
+		fmt.Println("收到:", string(line[:len(line)-1]), err)
 		user := fmt.Sprintf("来自 %s 说: ", client.RemoteAddr())
+		fmt.Println(user, conn_slice)
 		for _, client_v := range conn_slice {
+			fmt.Println(client_v)
 			client_v.Write([]byte(user + string(line)))
 		}
 		//		client.Write(line)
