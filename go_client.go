@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net"
 	"os"
+
+	"github.com/fatih/color"
 )
 
 func Recived(conn net.Conn) {
@@ -35,7 +37,8 @@ func Recived_back(conn net.Conn) {
 			fmt.Printf("读取返回数据错误 %s", err)
 			break
 		}
-		fmt.Println(r_msg)
+		//		fmt.Println(r_msg)
+		color.Cyan(r_msg)
 	}
 }
 

@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"strings"
 )
 
 const PORT = 3540
 
-var conn_slice []net.Conn
+//var conn_map map[string]net.Conn
 
 func main() {
 	//建立 socket, 监听端口
@@ -19,13 +20,18 @@ func main() {
 		panic("couldn't start listening: ")
 	}
 	conns := clientConns(server)
+	//初始化 mapx
+	conn_map := make(map[string]net.Conn)
+
 	for {
-		go handleConn(<-conns)
+		conn := <-conns
+		go handleConn(conn_map, conn)
 	}
 }
 
 func clientConns(listener net.Listener) chan net.Conn {
 	ch := make(chan net.Conn)
+
 	i := 0
 	go func() {
 		for {
@@ -34,7 +40,7 @@ func clientConns(listener net.Listener) chan net.Conn {
 				fmt.Println("couldn't accept: ", err)
 				continue
 			}
-			conn_slice = append(conn_slice, client)
+
 			i++
 			fmt.Printf("%d: %v <-> %v\n", i, client.LocalAddr(), client.RemoteAddr())
 			ch <- client
@@ -43,23 +49,39 @@ func clientConns(listener net.Listener) chan net.Conn {
 	return ch
 }
 
-func handleConn(client net.Conn) {
+func handleConn(conn_map map[string]net.Conn, client net.Conn) {
 	//	bufio.NewReader()创建一个默认大小的readbuf
 	b := bufio.NewReader(client)
 
 	for {
 		line, err := b.ReadBytes('\n')
-		if err != nil { // EOF, or worse
+		fmt.Println(line)
+		if err != nil {
 			fmt.Printf("client %s was disconnected!\n", client.RemoteAddr())
 			break
 		}
-		fmt.Println("收到:", string(line[:len(line)-1]), err)
-		user := fmt.Sprintf("来自 %s 说: ", client.RemoteAddr())
-		fmt.Println(user, conn_slice)
-		for _, client_v := range conn_slice {
-			fmt.Println(client_v)
-			client_v.Write([]byte(user + string(line)))
+		data := string(line[:len(line)-1])
+		data = strings.TrimSpace(data)
+		fmt.Println("recv data:", data)
+		seek_status := false
+		user := ""
+		for c_k, c_v := range conn_map {
+			fmt.Println(" =>\n", c_k, c_v)
+			if client == c_v {
+				seek_status = true
+				user = c_k + " say: "
+				fmt.Println("find_user:\n", user)
+				break
+			}
 		}
-		//		client.Write(line)
+
+		if seek_status {
+			for _, client_v := range conn_map {
+				client_v.Write([]byte(user + data + "\n"))
+			}
+		} else {
+			conn_map[data] = client
+		}
+
 	}
 }
