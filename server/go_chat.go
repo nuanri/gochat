@@ -1,11 +1,14 @@
 package main
 
 import (
-	"bufio"
+	//	"bufio"
 	"fmt"
 	"net"
 	"strconv"
 	"strings"
+
+	//"github.com/nuanri/go-chat"
+	"nuanri/gochat"
 )
 
 const PORT = 3540
@@ -51,10 +54,11 @@ func clientConns(listener net.Listener) chan net.Conn {
 
 func handleConn(conn_map map[string]net.Conn, client net.Conn) {
 	//	bufio.NewReader()创建一个默认大小的readbuf
-	b := bufio.NewReader(client)
+	//	b := bufio.NewReader(client)
 
 	for {
-		line, err := b.ReadBytes('\n')
+		//		line, err := b.ReadBytes('\n')
+		line, err := gochat.Recv(client)
 		fmt.Println(line)
 		if err != nil {
 			fmt.Printf("client %s was disconnected!\n", client.RemoteAddr())
@@ -77,7 +81,10 @@ func handleConn(conn_map map[string]net.Conn, client net.Conn) {
 
 		if seek_status {
 			for _, client_v := range conn_map {
-				client_v.Write([]byte(user + data + "\n"))
+				//				client_v.Write([]byte(user + data + "\n"))
+				payload := []byte(user + data + "\n")
+				gochat.Send(client_v, payload)
+
 			}
 		} else {
 			conn_map[data] = client

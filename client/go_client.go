@@ -7,6 +7,8 @@ import (
 	"os"
 
 	"github.com/fatih/color"
+
+	"nuanri/gochat"
 )
 
 func Recived(conn net.Conn) {
@@ -24,21 +26,20 @@ func Recived(conn net.Conn) {
 		}
 
 		line := []byte(msg)
-		conn.Write(line)
+		//		conn.Write(line)
+		gochat.Send(conn, line)
 	}
 }
 
 func Recived_back(conn net.Conn) {
 
-	conn_reader := bufio.NewReader(conn)
 	for {
-		r_msg, err := conn_reader.ReadString('\n')
+		r_msg, err := gochat.Recv(conn)
 		if err != nil {
 			fmt.Printf("读取返回数据错误 %s", err)
 			break
 		}
-		//		fmt.Println(r_msg)
-		color.Cyan(r_msg)
+		color.Cyan(string(r_msg))
 	}
 }
 
