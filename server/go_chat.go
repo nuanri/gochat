@@ -2,7 +2,6 @@ package main
 
 import (
 	//	"bufio"
-	"encoding/json"
 	"fmt"
 	"net"
 	"strconv"
@@ -72,24 +71,27 @@ func handleConn(conn_map map[string]*gochat.Conn, client_raw net.Conn) {
 		fmt.Println("recv data:", data)
 
 		seek_status := false
-		user := ""
 
-		for c_k, c_v := range conn_map {
-			fmt.Println(" =>", c_k, c_v)
+		for _, c_v := range conn_map {
 			if client == c_v {
 				seek_status = true
-				user = c_k + " say: "
-				fmt.Println("find_user:", user)
 				break
 			}
 		}
 
 		if seek_status {
-			message := ParseMsg(data)
+			message, err := gochat.ParseMsg(data)
+			if err != nil {
+				fmt.Println("输入格式错误 :", err)
+				fmt.Println("  data :", data)
+				client.Send([]byte(`{"name": "我", "msg": "笨蛋"}`))
+
+				continue
+			}
 
 			if message.Name == "all" {
 				for _, client_v := range conn_map {
-					payload := []byte(user + message.Msg + "\n")
+					payload := []byte(message.JSON())
 					client_v.Send(payload)
 
 				}
@@ -100,7 +102,7 @@ func handleConn(conn_map map[string]*gochat.Conn, client_raw net.Conn) {
 					client.Send([]byte("别烦我！"))
 					continue
 				}
-				payload := []byte(user + message.Msg + "\n")
+				payload := []byte(message.JSON())
 				client_v.Send(payload)
 			}
 
@@ -109,24 +111,4 @@ func handleConn(conn_map map[string]*gochat.Conn, client_raw net.Conn) {
 		}
 
 	}
-}
-
-type Message struct {
-	Name string `json:"name"`
-	Msg  string `json:"msg"`
-}
-
-func ParseMsg(line string) Message {
-
-	var message Message
-
-	data := []byte(line)
-	fmt.Println("传到解析json里的字符串", data)
-	err := json.Unmarshal(data, &message)
-	if err != nil {
-		fmt.Println("json 解析出错", err)
-
-	}
-
-	return message
 }

@@ -42,7 +42,19 @@ func Recived_back(conn net.Conn) {
 			fmt.Printf("读取返回数据错误 %s", err)
 			break
 		}
-		color.Cyan(string(r_msg))
+
+		message, err := gochat.ParseMsg(string(r_msg))
+		if err != nil {
+			fmt.Println("输入格式错误 :", err)
+			fmt.Println("  r_msg :", string(r_msg))
+
+			continue
+		}
+		//		color.Magenta(message.Name)
+		//		fmt.Println(message.Msg)
+		d := color.New(color.FgCyan, color.Bold)
+		d.Printf("%s say", message.Name)
+		fmt.Println(" : ", message.Msg)
 	}
 }
 
