@@ -55,27 +55,31 @@ func (c *Conn) Recv() ([]byte, error) {
 		fmt.Printf("payload 读取错误 n=%d, length=%d", n, length)
 		return nil, errors.New("payload 读取错误")
 	}
-	//buf2 := bytes.NewReader(blen2)
-	//info := buf2[:n]
 
 	return blen2[:n], nil
 
 }
 
-func (c *Conn) Send(payload []byte) {
+func (c *Conn) Send(payload []byte) (int, error) {
 	length := uint32(len(payload))
 	buf := new(bytes.Buffer)
 
 	err := binary.Write(buf, binary.LittleEndian, length)
 	if err != nil {
 		fmt.Println("binary.Write failed", err)
+		return 0, err
 	}
 
-	//conn.Write(buf.Bytes() + payload)
-	//	conn.Write(buf.Bytes())
-	//	conn.Write(payload)
+	err = binary.Write(buf, binary.LittleEndian, payload)
+	if err != nil {
+		fmt.Println("binary.Write failed", err)
+		return 0, err
+	}
 
-	buf.Write(payload)
-	c.conn.Write(buf.Bytes())
+	return c.conn.Write(buf.Bytes())
 
+}
+
+func (c *Conn) RemoteAddr() net.Addr {
+	return c.conn.RemoteAddr()
 }

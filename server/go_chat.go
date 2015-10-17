@@ -2,6 +2,7 @@ package main
 
 import (
 	//	"bufio"
+	"encoding/json"
 	"fmt"
 	"net"
 	"strconv"
@@ -24,7 +25,7 @@ func main() {
 	}
 	conns := clientConns(server)
 	//初始化 mapx
-	conn_map := make(map[string]net.Conn)
+	conn_map := make(map[string]*gochat.Conn)
 
 	for {
 		conn := <-conns
@@ -52,15 +53,15 @@ func clientConns(listener net.Listener) chan net.Conn {
 	return ch
 }
 
-func handleConn(conn_map map[string]net.Conn, client net.Conn) {
+func handleConn(conn_map map[string]*gochat.Conn, client_raw net.Conn) {
 	//	bufio.NewReader()创建一个默认大小的readbuf
 	//	b := bufio.NewReader(client)
+	client := gochat.NewConn(client_raw)
 
 	for {
 		//		line, err := b.ReadBytes('\n')
 
-		conn := gochat.NewConn(client)
-		line, err := conn.Recv()
+		line, err := client.Recv()
 		fmt.Println(line)
 		if err != nil {
 			fmt.Printf("client %s was disconnected!\n", client.RemoteAddr())
@@ -69,29 +70,63 @@ func handleConn(conn_map map[string]net.Conn, client net.Conn) {
 		data := string(line[:len(line)-1])
 		data = strings.TrimSpace(data)
 		fmt.Println("recv data:", data)
+
 		seek_status := false
 		user := ""
+
 		for c_k, c_v := range conn_map {
-			fmt.Println(" =>\n", c_k, c_v)
+			fmt.Println(" =>", c_k, c_v)
 			if client == c_v {
 				seek_status = true
 				user = c_k + " say: "
-				fmt.Println("find_user:\n", user)
+				fmt.Println("find_user:", user)
 				break
 			}
 		}
 
 		if seek_status {
-			for _, client_v := range conn_map {
-				//				client_v.Write([]byte(user + data + "\n"))
-				payload := []byte(user + data + "\n")
-				conn_v := gochat.NewConn(client_v)
-				conn_v.Send(payload)
+			message := ParseMsg(data)
 
+			if message.Name == "all" {
+				for _, client_v := range conn_map {
+					payload := []byte(user + message.Msg + "\n")
+					client_v.Send(payload)
+
+				}
+			} else {
+				client_v, ok := conn_map[message.Name]
+				if !ok {
+					fmt.Println("没有找到该用户", message.Name)
+					client.Send([]byte("别烦我！"))
+					continue
+				}
+				payload := []byte(user + message.Msg + "\n")
+				client_v.Send(payload)
 			}
+
 		} else {
 			conn_map[data] = client
 		}
 
 	}
+}
+
+type Message struct {
+	Name string `json:"name"`
+	Msg  string `json:"msg"`
+}
+
+func ParseMsg(line string) Message {
+
+	var message Message
+
+	data := []byte(line)
+	fmt.Println("传到解析json里的字符串", data)
+	err := json.Unmarshal(data, &message)
+	if err != nil {
+		fmt.Println("json 解析出错", err)
+
+	}
+
+	return message
 }
