@@ -58,7 +58,9 @@ func handleConn(conn_map map[string]net.Conn, client net.Conn) {
 
 	for {
 		//		line, err := b.ReadBytes('\n')
-		line, err := gochat.Recv(client)
+
+		conn := gochat.NewConn(client)
+		line, err := conn.Recv()
 		fmt.Println(line)
 		if err != nil {
 			fmt.Printf("client %s was disconnected!\n", client.RemoteAddr())
@@ -83,7 +85,8 @@ func handleConn(conn_map map[string]net.Conn, client net.Conn) {
 			for _, client_v := range conn_map {
 				//				client_v.Write([]byte(user + data + "\n"))
 				payload := []byte(user + data + "\n")
-				gochat.Send(client_v, payload)
+				conn_v := gochat.NewConn(client_v)
+				conn_v.Send(payload)
 
 			}
 		} else {

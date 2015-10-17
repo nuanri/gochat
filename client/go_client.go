@@ -27,14 +27,17 @@ func Recived(conn net.Conn) {
 
 		line := []byte(msg)
 		//		conn.Write(line)
-		gochat.Send(conn, line)
+		conn := gochat.NewConn(conn)
+		conn.Send(line)
 	}
 }
 
 func Recived_back(conn net.Conn) {
 
+	conn_c := gochat.NewConn(conn)
+
 	for {
-		r_msg, err := gochat.Recv(conn)
+		r_msg, err := conn_c.Recv()
 		if err != nil {
 			fmt.Printf("读取返回数据错误 %s", err)
 			break
