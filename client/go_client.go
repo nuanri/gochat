@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"net"
 	"os"
@@ -11,9 +12,11 @@ import (
 	"nuanri/gochat"
 )
 
-func Recived(conn net.Conn) {
+var name string
 
-	go Recived_back(conn)
+func Recived(raw_conn net.Conn) {
+
+	go Recived_back(raw_conn)
 
 	r := bufio.NewReader(os.Stdin)
 
@@ -25,10 +28,15 @@ func Recived(conn net.Conn) {
 			break
 		}
 
-		line := []byte(msg)
+		msg = msg[:len(msg)-1]
+		sigbody := gochat.SendBody{To: "all", Msg: msg}
+		s := gochat.GetJson(sigbody)
+
+		reg := gochat.HiMsg{Cmd: "sendmessage", Body: s}
+		regjson := gochat.GetJson(reg)
 		//		conn.Write(line)
-		conn := gochat.NewConn(conn)
-		conn.Send(line)
+		conn := gochat.NewConn(raw_conn)
+		conn.Send(regjson)
 	}
 }
 
@@ -37,28 +45,56 @@ func Recived_back(conn net.Conn) {
 	conn_c := gochat.NewConn(conn)
 
 	for {
-		r_msg, err := conn_c.Recv()
+		data, err := conn_c.Recv()
 		if err != nil {
 			fmt.Printf("读取返回数据错误 %s", err)
 			break
 		}
 
-		message, err := gochat.ParseMsg(string(r_msg))
+		msg := gochat.HiMsg{}
+		err = gochat.ParseMsg(data, &msg)
 		if err != nil {
 			fmt.Println("输入格式错误 :", err)
-			fmt.Println("  r_msg :", string(r_msg))
-
+			fmt.Println("  data :", string(data))
 			continue
 		}
-		//		color.Magenta(message.Name)
-		//		fmt.Println(message.Msg)
+
+		body := gochat.SendBody{}
+		err = gochat.ParseMsg(msg.Body, &body)
+		if err != nil {
+			fmt.Println("输入格式错误 :", err)
+			fmt.Println("  msg.Body :", msg.Body)
+			continue
+		}
+
 		d := color.New(color.FgCyan, color.Bold)
-		d.Printf("%s say", message.Name)
-		fmt.Println(" : ", message.Msg)
+
+		d.Print(body.From)
+		fmt.Println(" : ", body.Msg)
+
 	}
 }
 
+func Registered(raw_conn net.Conn) {
+
+	sigbody := gochat.SigBody{Name: name}
+	s := gochat.GetJson(sigbody)
+
+	reg := gochat.HiMsg{Cmd: "signup", Body: s}
+	regjson := gochat.GetJson(reg)
+	//		conn.Write(line)
+	conn := gochat.NewConn(raw_conn)
+	conn.Send(regjson)
+
+}
+
+func parse_ops() {
+	flag.StringVar(&name, "name", "hichat", "设置用户名")
+	flag.Parse()
+}
+
 func main() {
+	parse_ops()
 
 	conn, err := net.Dial("tcp", "127.0.0.1:3540")
 
@@ -69,6 +105,7 @@ func main() {
 		fmt.Println("connected!\n")
 	}
 
+	Registered(conn)
 	Recived(conn)
 
 }

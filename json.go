@@ -5,30 +5,36 @@ import (
 	"fmt"
 )
 
-//解析 Json
-type Message struct {
-	Name string `json:"name"`
-	Msg  string `json:"msg"`
+type HiMsg struct {
+	Cmd  string `json:"cmd"`
+	Body []byte `json:"body"`
 	//	UserLogo string `json:"user_logo"`
 }
 
-func ParseMsg(line string) (*Message, error) {
+type SigBody struct {
+	Name string `json:"name"`
+}
 
-	var message Message
+type SendBody struct {
+	To   string `json:"to"`
+	From string `json:"from"`
+	Msg  string `json:"msg"`
+}
 
-	data := []byte(line)
-	//	fmt.Println("传到解析json里的字符串", data)
-	err := json.Unmarshal(data, &message)
+//解析 Json
+func ParseMsg(data []byte, m interface{}) error {
+
+	err := json.Unmarshal(data, m)
 	if err != nil {
 		fmt.Println("json 解析出错", err)
-		return nil, err
+		return err
 	}
 
-	return &message, nil
+	return nil
 }
 
 //生成 Json
-func (m *Message) JSON() string {
+func GetJson(m interface{}) []byte {
 
 	b, _ := json.Marshal(m)
 	/*	if err != nil {
@@ -36,5 +42,5 @@ func (m *Message) JSON() string {
 		return "", err
 	}*/
 
-	return string(b)
+	return b
 }

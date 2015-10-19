@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
-	"strings"
+	//	"strings"
 
 	//"github.com/nuanri/go-chat"
 	"nuanri/gochat"
@@ -23,7 +23,7 @@ func main() {
 		panic("couldn't start listening: ")
 	}
 	conns := clientConns(server)
-	//初始化 mapx
+	//初始化 map
 	conn_map := make(map[string]*gochat.Conn)
 
 	for {
@@ -58,56 +58,67 @@ func handleConn(conn_map map[string]*gochat.Conn, client_raw net.Conn) {
 	client := gochat.NewConn(client_raw)
 
 	for {
-		//		line, err := b.ReadBytes('\n')
-
-		line, err := client.Recv()
-		fmt.Println(line)
+		data, err := client.Recv()
 		if err != nil {
 			fmt.Printf("client %s was disconnected!\n", client.RemoteAddr())
 			break
 		}
-		data := string(line[:len(line)-1])
-		data = strings.TrimSpace(data)
-		fmt.Println("recv data:", data)
-
-		seek_status := false
-
-		for _, c_v := range conn_map {
-			if client == c_v {
-				seek_status = true
-				break
-			}
+		fmt.Println("data =", string(data))
+		himsg := &gochat.HiMsg{}
+		err = gochat.ParseMsg(data, himsg)
+		if err != nil {
+			fmt.Println("输入格式错误 :", err)
+			fmt.Println("  data :", data)
+			client.Send([]byte(`{"name": "我", "msg": "笨蛋"}`))
+			continue
 		}
 
-		if seek_status {
-			message, err := gochat.ParseMsg(data)
+		switch true {
+		case himsg.Cmd == "signup":
+			sigb := &gochat.SigBody{}
+			err := gochat.ParseMsg([]byte(himsg.Body), sigb)
 			if err != nil {
-				fmt.Println("输入格式错误 :", err)
-				fmt.Println("  data :", data)
-				client.Send([]byte(`{"name": "我", "msg": "笨蛋"}`))
+				fmt.Println("signbody格式错误")
+				break
+			}
+			//往 map 里添加 client
+			fmt.Println("sigb.Name=", sigb.Name)
+			conn_map[sigb.Name] = client
 
-				continue
+		case himsg.Cmd == "sendmessage":
+			sendb := &gochat.SendBody{}
+			err := gochat.ParseMsg([]byte(himsg.Body), sendb)
+			if err != nil {
+				fmt.Println("sendbody格式错误")
+				break
 			}
 
-			if message.Name == "all" {
+			if sendb.To == "all" {
+				username := ""
+				for k, v := range conn_map {
+					if client == v {
+						username = k
+						break
+					}
+				}
 				for _, client_v := range conn_map {
-					payload := []byte(message.JSON())
-					client_v.Send(payload)
+					r_body := &gochat.SendBody{From: username, Msg: sendb.Msg}
+					r_body_b := gochat.GetJson(r_body)
+					r_msg := &gochat.HiMsg{Body: r_body_b}
+					r_msg_b := gochat.GetJson(r_msg)
 
+					client_v.Send(r_msg_b)
 				}
 			} else {
-				client_v, ok := conn_map[message.Name]
+				client_v, ok := conn_map[sendb.To]
 				if !ok {
-					fmt.Println("没有找到该用户", message.Name)
+					fmt.Println("没有找到该用户", sendb.To)
 					client.Send([]byte("别烦我！"))
 					continue
 				}
-				payload := []byte(message.JSON())
+				payload := gochat.GetJson(himsg)
 				client_v.Send(payload)
 			}
-
-		} else {
-			conn_map[data] = client
 		}
 
 	}
