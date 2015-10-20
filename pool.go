@@ -55,3 +55,11 @@ func (p *ClientPool) SendToAll(himsg *HiMsg) {
 
 	}
 }
+
+func (p *ClientPool) SendTo(username string, himsg *HiMsg) {
+	conn, ok := p.GetByUsername(username)
+	if ok {
+		r_msg_b := GetJson(himsg)
+		conn.Send(r_msg_b)
+	}
+}

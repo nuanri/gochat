@@ -3,6 +3,7 @@ package gochat
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 )
 
 type HiMsg struct {
@@ -19,6 +20,21 @@ type SendBody struct {
 	To   string `json:"to"`
 	From string `json:"from"`
 	Msg  string `json:"msg"`
+}
+
+func (m *SendBody) GetUsers() []string {
+	users := []string{}
+
+	reg := regexp.MustCompile(`@[a-zA-Z0-9]+`)
+	//fmt.Printf("%q\n", reg.FindAllString(m.Msg, -1))
+	for _, v := range reg.FindAllString(m.Msg, -1) {
+		v = v[1:]
+		users = append(users, v)
+	}
+	fmt.Printf("%q\n", users)
+
+	return users
+
 }
 
 //解析 Json

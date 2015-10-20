@@ -104,13 +104,25 @@ func handleConn(conn_map map[string]*gochat.Conn, client_raw net.Conn) {
 			}
 
 			if sendb.To == "all" {
-				username := pool.GetByConn(client)
+				user_slice := sendb.GetUsers()
+				if len(user_slice) > 0 {
+					username := pool.GetByConn(client)
+					r_body := &gochat.SendBody{From: username, Msg: sendb.Msg}
+					r_body_b := gochat.GetJson(r_body)
+					r_himsg := &gochat.HiMsg{Body: r_body_b}
+					for _, user := range user_slice {
+						pool.SendTo(user, r_himsg)
+					}
 
-				r_body := &gochat.SendBody{From: username, Msg: sendb.Msg}
-				r_body_b := gochat.GetJson(r_body)
-				himsg.Body = r_body_b
+				} else {
+					username := pool.GetByConn(client)
 
-				pool.SendToAll(himsg)
+					r_body := &gochat.SendBody{From: username, Msg: sendb.Msg}
+					r_body_b := gochat.GetJson(r_body)
+					himsg.Body = r_body_b
+
+					pool.SendToAll(himsg)
+				}
 
 			} else {
 				client_v, ok := pool.GetByUsername(sendb.To)
