@@ -58,13 +58,21 @@ func handleConn(conn_map map[string]*gochat.Conn, client_raw net.Conn) {
 	pool := gochat.NewClientPool(conn_map)
 
 	for {
+		himsg := &gochat.HiMsg{}
 		data, err := client.Recv()
 		if err != nil {
 			fmt.Printf("client %s was disconnected!\n", client.RemoteAddr())
+			username := pool.GetByConn(client)
+
+			r_body := &gochat.SendBody{From: "gochat", Msg: username + " offline!"}
+			r_body_b := gochat.GetJson(r_body)
+			himsg.Body = r_body_b
+
+			pool.SendToAll(himsg)
 			break
 		}
 		fmt.Println("data =", string(data))
-		himsg := &gochat.HiMsg{}
+
 		err = gochat.ParseMsg(data, himsg)
 		if err != nil {
 			fmt.Println("输入格式错误 :", err)
