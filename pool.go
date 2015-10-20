@@ -1,5 +1,9 @@
 package gochat
 
+import (
+	log "github.com/Sirupsen/logrus"
+)
+
 type ClientPool struct {
 	pool_map map[string]*Conn
 }
@@ -34,7 +38,9 @@ func (p *ClientPool) GetByUsername(username string) (*Conn, bool) {
 }
 
 func (p *ClientPool) DelByConn(conn *Conn) {
-
+	key := p.GetByConn(conn)
+	delete(p.pool_map, key)
+	log.Info("删除了 ", key)
 }
 
 func (p *ClientPool) DelByUsername(username string) {

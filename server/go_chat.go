@@ -69,6 +69,8 @@ func handleConn(conn_map map[string]*gochat.Conn, client_raw net.Conn) {
 			himsg.Body = r_body_b
 
 			pool.SendToAll(himsg)
+			pool.DelByConn(client)
+
 			break
 		}
 		fmt.Println("data =", string(data))
