@@ -12,7 +12,10 @@ import (
 	"nuanri/gochat"
 )
 
-var name string
+var (
+	name           string
+	server_address string
+)
 
 func Recived(raw_conn net.Conn) {
 
@@ -90,13 +93,14 @@ func Registered(raw_conn net.Conn) {
 
 func parse_ops() {
 	flag.StringVar(&name, "name", "hichat", "设置用户名")
+	flag.StringVar(&server_address, "server", "127.0.0.1:9999", "服务器地址")
 	flag.Parse()
 }
 
 func main() {
 	parse_ops()
 
-	conn, err := net.Dial("tcp", "127.0.0.1:3540")
+	conn, err := net.Dial("tcp", server_address)
 
 	if err != nil {
 		fmt.Printf("Failure to connent:%s\n", err)

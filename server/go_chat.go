@@ -11,7 +11,7 @@ import (
 	"nuanri/gochat"
 )
 
-const PORT = 3540
+const PORT = 9999
 
 //var conn_map map[string]net.Conn
 
@@ -53,9 +53,9 @@ func clientConns(listener net.Listener) chan net.Conn {
 }
 
 func handleConn(conn_map map[string]*gochat.Conn, client_raw net.Conn) {
-	//	bufio.NewReader()创建一个默认大小的readbuf
-	//	b := bufio.NewReader(client)
+
 	client := gochat.NewConn(client_raw)
+	pool := gochat.NewClientPool(conn_map)
 
 	for {
 		data, err := client.Recv()
@@ -83,7 +83,7 @@ func handleConn(conn_map map[string]*gochat.Conn, client_raw net.Conn) {
 			}
 			//往 map 里添加 client
 			fmt.Println("sigb.Name=", sigb.Name)
-			conn_map[sigb.Name] = client
+			pool.Add(sigb.Name, client)
 
 		case himsg.Cmd == "sendmessage":
 			sendb := &gochat.SendBody{}
@@ -94,23 +94,16 @@ func handleConn(conn_map map[string]*gochat.Conn, client_raw net.Conn) {
 			}
 
 			if sendb.To == "all" {
-				username := ""
-				for k, v := range conn_map {
-					if client == v {
-						username = k
-						break
-					}
-				}
-				for _, client_v := range conn_map {
-					r_body := &gochat.SendBody{From: username, Msg: sendb.Msg}
-					r_body_b := gochat.GetJson(r_body)
-					r_msg := &gochat.HiMsg{Body: r_body_b}
-					r_msg_b := gochat.GetJson(r_msg)
+				username := pool.GetByConn(client)
 
-					client_v.Send(r_msg_b)
-				}
+				r_body := &gochat.SendBody{From: username, Msg: sendb.Msg}
+				r_body_b := gochat.GetJson(r_body)
+				himsg.Body = r_body_b
+
+				pool.SendToAll(himsg)
+
 			} else {
-				client_v, ok := conn_map[sendb.To]
+				client_v, ok := pool.GetByUsername(sendb.To)
 				if !ok {
 					fmt.Println("没有找到该用户", sendb.To)
 					client.Send([]byte("别烦我！"))
